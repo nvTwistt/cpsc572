@@ -130,6 +130,9 @@ for c in characterData:
     #    break
     #counter+=1
 
+execution_1 = (time.time() - startTime)
+print('completed operations on modern MCU data in seconds: ' + str(execution_1))
+
 def createList(newData):
     list_of_current_characters = list(characterDict.keys())
     tempList = []
@@ -155,6 +158,8 @@ for items in differenceList:
 
 # dataSize = len(expandedData)
 
+execution_2 = (time.time() - startTime)
+print('Retrieved, formatted comic book data and created list of all characters in seconds: ' + str(execution_2))
 
 def mergeData(characterDict, dataDict):
     #print(dataDict)
@@ -177,8 +182,8 @@ def mergeData(characterDict, dataDict):
 mergeData(characterDict, expandedData)
 
 
-executionT = (time.time() - startTime)
-print('Step 1 executed in seconds: ' + str(executionT))
+execution_3 = (time.time() - startTime)
+print('Merged two data sets in seconds: ' + str(execution_3))
 #print(type(newCharacterList))
 
 # use characterDict to get characters and their appearances
@@ -214,7 +219,6 @@ def countAppearances(minilist, fulllist):
 
 
 def multithread():
-    
     countAppearances(newCharacterList, newCharacterList)
     #countAppearances(characterDict.keys(), characterDict.keys())
     executionTime1 = (time.time() - startTime)
