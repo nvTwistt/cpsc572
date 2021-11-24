@@ -1,42 +1,47 @@
-import json
-import characters
-import addData
+import characterData
 import pandas as pd
 import time
 from numpy import empty
 from numpy.lib.arraysetops import unique
-import openpyxl
 import pandas as pd 
-import numpy as np
-import math
-import itertools
-import multiprocessing
-import csv
-characterData = characters.character
+
+characterData = characterData.character
 #reference https://raw.githubusercontent.com/skut21x-ga/mcu-api/master/lib/db/mcudata.json
 #get the length of the characters list
 numCharacters = len(characterData)
 counter = 0
 characterDict = {}
 search_items = ['comic', 'game', 'movie', 'tv_series']
+outputFileName = input("Enter in a csv output file (modernMCU.csv): ")
+if(".csv" in outputFileName):
+    print("Valid output file")
+else:
+    print("Please run program again and enter a valid output file")
+    quit()
 
+#Function gets characters real name    
 def getName(characterItem):
     return characterItem['real_name']
+
+#Function gets characters superhero name
 def getAlias(characterItem):
     characterNicknames = (characterItem['alias'])
     aliasList = characterNicknames.split(", ")
     return aliasList[0]
 
+#Function gets comic book appearances
 def getComics(characterItem):
     return characterItem[search_items[0]]
 
+#Function gets video game appearances
 def getGames(characterItem):
     return characterItem[search_items[1]]
 
-
+#Function gets movie appearances
 def getMovies(characterItem):
     return characterItem[search_items[2]]
 
+#Function gets tv show appearances
 def getTv(characterItem):
     return characterItem[search_items[3]]
 
@@ -72,6 +77,7 @@ def identifyGame(games):
         gameList.append(gameName)
     return gameList
 
+#Function gets appearances and adds them to a list 
 def getAppearances(characterItem):
     appearanceList = []
     characterComic = getComics(characterItem)
@@ -113,78 +119,30 @@ def getAppearances(characterItem):
 
 
 #iterate through the list and get the names of all characters
-counter = 0
 #start time
 startTime = time.time()
 connectionsDict = {}
+
+#Function retrieves character data and populates dictionary with appearances.
 for c in characterData:
     characterAlias = getAlias(c) #n+3
     characterName = getName(c) #n
     appearances = getAppearances(c) #n+5+3+10+4+n = 2n+19
     name = ""
+    # Add the character to the  dictionary and add their appearances as a list of values
     if (characterAlias != "NA"):
         characterDict.update({characterAlias:appearances}) # n+1
-        
-    # counter is used to stop it early for testing purposes.
-    #if counter == 7:
-    #    break
-    #counter+=1
 
 execution_1 = (time.time() - startTime)
 print('completed operations on modern MCU data in seconds: ' + str(execution_1))
 
-def createList(newData):
-    list_of_current_characters = list(characterDict.keys())
-    tempList = []
-    for x in list_of_current_characters:
-        lowerName = x.lower()
-        tempList.append(lowerName)
-    list_of_comic_characters = list(newData.keys())
-    differences = (set(list_of_comic_characters) - set(tempList)).union(set(tempList) - set(list_of_comic_characters))
-    mergedCharacterList = list(set(list(list_of_current_characters)+list(differences)))
-    return mergedCharacterList, differences
-
-#get data from excel file
-expandedData = addData.expandNetwork()
-
-newCharacterList, differenceList = createList(expandedData)
-
-for i in newCharacterList:
-#for i in characterDict.keys():
+# Adds characters to the connections dictionary
+for i in characterDict.keys():
+    #set character names to lower case
+    i.lower()
+    #Add the characters to the dictionary and their value is an empty list
     connectionsDict.update({i:[]})
 
-for items in differenceList: 
-    characterDict.update({items:[]})
-
-# dataSize = len(expandedData)
-
-execution_2 = (time.time() - startTime)
-print('Retrieved, formatted comic book data and created list of all characters in seconds: ' + str(execution_2))
-
-def mergeData(characterDict, dataDict):
-    #print(dataDict)
-    for c in dataDict:
-    #print(c)
-    # if counter_1  == 3:
-    #     break
-    # counter_1 +=1
-        for x in characterDict:
-            #name = x.lower()
-            #if c == 'scatterbrain' and name == 'scatterbrain': 
-                #print(dataDict[c])
-                #print(characterDict[x])
-            if x == c:
-               items = characterDict[x]
-               comicData = dataDict[c]
-               mergedList = list(set(items+comicData))
-               characterDict[x] = mergedList
-
-mergeData(characterDict, expandedData)
-
-
-execution_3 = (time.time() - startTime)
-print('Merged two data sets in seconds: ' + str(execution_3))
-#print(type(newCharacterList))
 
 # use characterDict to get characters and their appearances
 characterList = list(characterDict.keys())
@@ -192,43 +150,41 @@ characterList = list(characterDict.keys())
 #algorithm to get characters list and create dictionary runs in 5n+19
 
 #create a dataframe to store the characters and map their weights.
-df = pd.DataFrame(columns=newCharacterList, index=newCharacterList)
-#df = pd.DataFrame(columns=characterDict.keys(), index=characterDict.keys())
-#print(df.head())
-#take the first name in the characters list
+df = pd.DataFrame(columns=characterList, index=characterList)
 
+
+#Function counts the number of appearances two heros will have in common
 def commonCounter(a,b): 
     c = [value for value in a if value in b] 
     return len(c)
 
+#Function iterates throughth list of characters and counts all their appearances with other characters
+# in the MCU. It will then populate the dataframe accordingly
 def countAppearances(minilist, fulllist):
     for marvelCharacter in minilist: #n^2
         currentCharacterAppears = characterDict[marvelCharacter]
-        #print("current character is: ", marvelCharacter, " appears in: ", currentCharacterAppears)
         #iterate through the character dictionary on each character
         for singleCharacters in fulllist:
         #if the character name is not equal to the current name 
             if (marvelCharacter != singleCharacters): #n steps 
                 MCUappearances = characterDict[singleCharacters]
                 result = commonCounter(currentCharacterAppears,MCUappearances)
-                #print("character: ", singleCharacters, "appear: " , MCUappearances)
                 value = connectionsDict[marvelCharacter]
                 value.append(result)
                 connectionsDict[marvelCharacter] = value
                 df.at[marvelCharacter,singleCharacters]=result
 
-
-def multithread():
-    countAppearances(newCharacterList, newCharacterList)
-    #countAppearances(characterDict.keys(), characterDict.keys())
+#Function that runs program
+def main():
+    countAppearances(characterList, characterList)
     executionTime1 = (time.time() - startTime)
     print('Done threading in seconds: ' + str(executionTime1))
-#countAppearances(newCharacterList)
-multithread()
+main()
 #runs in n^2 + 2n+3 
 
-df.to_csv('FullMCU.csv')
-#df.to_excel (r'C:\Users\mtamk\OneDrive\Documents\SB2\Fall21\cpsc572', index = False, header=True)
+#writes df to CSV
+df.to_csv(outputFileName)
+
 executionTime = (time.time() - startTime)
 print('Execution time in seconds: ' + str(executionTime))
 
